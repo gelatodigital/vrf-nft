@@ -7,6 +7,7 @@ import "./Base64.sol";
 
 contract onChainNFT is ERC721Enumerable, Ownable {
     using Strings for uint256;
+
     bool public paused = false;
     mapping(uint256 => Word) public wordsToTokenId;
     uint256 public stringLimit = 45;
@@ -20,7 +21,7 @@ contract onChainNFT is ERC721Enumerable, Ownable {
     }
 
     //string[] public wordValues = ["accomplish", "accepted", "absolutely", "admire", "achievment", "active"];
-
+    // TODO: Replace random num with chainlink VRF
     constructor() ERC721("onChainNFT", "OCN") {}
 
     // public
@@ -51,119 +52,91 @@ contract onChainNFT is ERC721Enumerable, Ownable {
         //totalSupply function starts at 1, as does out wordToTokenId mapping
         for (uint256 i = 1; i <= totalSupply(); i++) {
             string memory text = wordsToTokenId[i].value;
-            if (
-                keccak256(abi.encodePacked(text)) ==
-                keccak256(abi.encodePacked(_text))
-            ) {
+            if (keccak256(abi.encodePacked(text)) == keccak256(abi.encodePacked(_text))) {
                 result = true;
             }
         }
         return result;
     }
 
-    function randomNum(
-        uint256 _mod,
-        uint256 _seed,
-        uint256 _salt
-    ) public view returns (uint256) {
-        uint256 num = uint256(
-            keccak256(
-                abi.encodePacked(block.timestamp, msg.sender, _seed, _salt)
-            )
-        ) % _mod;
+    function randomNum(uint256 _mod, uint256 _seed, uint256 _salt) public view returns (uint256) {
+        uint256 num = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, _seed, _salt))) % _mod;
         return num;
     }
 
     function buildImage(uint256 _tokenId) private view returns (string memory) {
         Word memory currentWord = wordsToTokenId[_tokenId];
         string memory random = randomNum(361, 3, 3).toString();
-        return
-            Base64.encode(
-                bytes(
-                    abi.encodePacked(
-                        '<svg width="500" height="500" xmlns="http://www.w3.org/2000/svg">',
-                        '<rect id="svg_11" height="600" width="503" y="0" x="0" fill="hsl(',
-                        currentWord.bgHue,
-                        ',50%,25%)"/>',
-                        '<text font-size="18" y="10%" x="5%" fill="hsl(',
-                        random,
-                        ',100%,80%)">Some Text</text>',
-                        '<text font-size="18" y="15%" x="5%" fill="hsl(',
-                        random,
-                        ',100%,80%)">Some Text</text>',
-                        '<text font-size="18" y="20%" x="5%" fill="hsl(',
-                        random,
-                        ',100%,80%)">Some Text</text>',
-                        '<text font-size="18" y="10%" x="80%" fill="hsl(',
-                        random,
-                        ',100%,80%)">Token: ',
-                        _tokenId.toString(),
-                        "</text>",
-                        '<text font-size="18" y="50%" x="50%" text-anchor="middle" fill="hsl(',
-                        random,
-                        ',100%,80%)">',
-                        currentWord.value,
-                        "</text>",
-                        "</svg>"
-                    )
+        return Base64.encode(
+            bytes(
+                abi.encodePacked(
+                    '<svg width="500" height="500" xmlns="http://www.w3.org/2000/svg">',
+                    '<rect id="svg_11" height="600" width="503" y="0" x="0" fill="hsl(',
+                    currentWord.bgHue,
+                    ',50%,25%)"/>',
+                    '<text font-size="18" y="10%" x="5%" fill="hsl(',
+                    random,
+                    ',100%,80%)">Some Text</text>',
+                    '<text font-size="18" y="15%" x="5%" fill="hsl(',
+                    random,
+                    ',100%,80%)">Some Text</text>',
+                    '<text font-size="18" y="20%" x="5%" fill="hsl(',
+                    random,
+                    ',100%,80%)">Some Text</text>',
+                    '<text font-size="18" y="10%" x="80%" fill="hsl(',
+                    random,
+                    ',100%,80%)">Token: ',
+                    _tokenId.toString(),
+                    "</text>",
+                    '<text font-size="18" y="50%" x="50%" text-anchor="middle" fill="hsl(',
+                    random,
+                    ',100%,80%)">',
+                    currentWord.value,
+                    "</text>",
+                    "</svg>"
                 )
-            );
+            )
+        );
     }
 
-    function buildMetadata(uint256 _tokenId)
-        private
-        view
-        returns (string memory)
-    {
+    function buildMetadata(uint256 _tokenId) private view returns (string memory) {
         Word memory currentWord = wordsToTokenId[_tokenId];
-        return
-            string(
-                abi.encodePacked(
-                    "data:application/json;base64,",
-                    Base64.encode(
-                        bytes(
-                            abi.encodePacked(
-                                '{"name":"',
-                                currentWord.name,
-                                '", "description":"',
-                                currentWord.description,
-                                '", "image": "',
-                                "data:image/svg+xml;base64,",
-                                buildImage(_tokenId),
-                                '", "attributes": ',
-                                "[",
-                                '{"trait_type": "TextColor",',
-                                '"value":"',
-                                currentWord.textHue,
-                                '"}',
-                                "]",
-                                "}"
-                            )
+        return string(
+            abi.encodePacked(
+                "data:application/json;base64,",
+                Base64.encode(
+                    bytes(
+                        abi.encodePacked(
+                            '{"name":"',
+                            currentWord.name,
+                            '", "description":"',
+                            currentWord.description,
+                            '", "image": "',
+                            "data:image/svg+xml;base64,",
+                            buildImage(_tokenId),
+                            '", "attributes": ',
+                            "[",
+                            '{"trait_type": "TextColor",',
+                            '"value":"',
+                            currentWord.textHue,
+                            '"}',
+                            "]",
+                            "}"
                         )
                     )
                 )
-            );
+            )
+        );
     }
 
-    function tokenURI(uint256 _tokenId)
-        public
-        view
-        virtual
-        override
-        returns (string memory)
-    {
-        require(
-            _exists(_tokenId),
-            "ERC721Metadata: URI query for nonexistent token"
-        );
+    function tokenURI(uint256 _tokenId) public view virtual override returns (string memory) {
+        require(_exists(_tokenId), "ERC721Metadata: URI query for nonexistent token");
         return buildMetadata(_tokenId);
     }
 
     //only owner
     function withdraw() public payable onlyOwner {
-        (bool success, ) = payable(msg.sender).call{
-            value: address(this).balance
-        }("");
+        (bool success,) = payable(msg.sender).call{value: address(this).balance}("");
         require(success);
     }
 }
