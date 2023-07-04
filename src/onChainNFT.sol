@@ -100,8 +100,8 @@ contract onChainNFT is ERC721Enumerable, Ownable, VRFConsumerBaseV2 {
         Word memory newWord = Word(
             string(abi.encodePacked("NFT", uint256(supply + 1).toString())),
             "This is our on-chain NFT",
-            randomNum(361, block.difficulty, supply).toString(),
-            randomNum(361, block.timestamp, supply).toString(),
+            randomNum(361, lastRequestId).toString(),
+            randomNum(361, lastRequestId).toString(),
             _userText
         );
 
@@ -126,14 +126,16 @@ contract onChainNFT is ERC721Enumerable, Ownable, VRFConsumerBaseV2 {
     }
 
     // TODO: Replace random num with chainlink VRF
-    function randomNum(uint256 _mod, uint256 _seed, uint256 _salt) public view returns (uint256) {
-        uint256 num = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, _seed, _salt))) % _mod;
+    function randomNum(uint256 _mod, uint256 _requestId) public view returns (uint256) {
+        require(s_requests[_requestId].fulfilled, "request not fulfilled");
+        require(s_requests[_requestId].exists, "request not found");
+        uint256 num = uint256(keccak256(abi.encodePacked(s_requests[_requestId].randomWords[0], msg.sender))) % _mod;
         return num;
     }
 
     function buildImage(uint256 _tokenId) private view returns (string memory) {
         Word memory currentWord = wordsToTokenId[_tokenId];
-        string memory random = randomNum(361, 3, 3).toString();
+        string memory random = randomNum(361, lastRequestId).toString();
         return Base64.encode(
             bytes(
                 abi.encodePacked(
