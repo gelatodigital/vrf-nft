@@ -1,24 +1,34 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
-import "./src/onChainNFT.sol";
+import "../src/NFTGame.sol";
 
-contract onChainNFT is Test {
-    onChainNFT public onChainNFT;
+contract NFTGameTest is Test {
+    NFTGame game;
 
     function setUp() public {
-     onChainNFT = new onChainNFT();
-     onChainNFT.setNumber(0);
+        uint64 subscriptionId = 0;
+        game = new NFTGame(subscriptionId);
     }
 
-    function testIncrement() public {
-     onChainNFT.increment();
-        assertEq onChainNFT.number(), 1);
+    function testMintPlayerNFT() public {
+        game.mintPlayerNFT();
+
+        assertEq(game.ownerOf(1), address(this));
+
+        (uint256 attack, uint256 health,, bool isActive) = game.players(address(this));
+
+        assertEq(attack, 100);
+        assertEq(health, 100);
+        assertTrue(isActive);
     }
 
-    function testSetNumber(uint256 x) public {
-     onChainNFT.setNumber(x);
-        assertEq onChainNFT.number(), x);
+    function testRequestRandomWords() public {
+        uint256 requestId = game.requestRandomWords();
+
+        (bool fulfilled,,) = game.s_requests(requestId);
+
+        assertFalse(fulfilled);
     }
 }
