@@ -35,6 +35,8 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         uint256[] randomWords;
     }
 
+    mapping(address => bool) public hasInitiatedFight;
+
     mapping(uint256 => RequestStatus) public s_requests;
 
     VRFCoordinatorV2Interface COORDINATOR;
@@ -72,6 +74,7 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         Player storage player = players[msg.sender];
         require(player.health > 0, "Your player is eliminated.");
         require(player.isActive == true, "Player not active for this round.");
+        require(hasInitiatedFight[msg.sender] == false, "Player has already initiated a fight this round.");
 
         totalFightsInitiated += 1;
 
@@ -86,6 +89,8 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         }
 
         if (player.health <= 0) player.isActive = false; // Player loses, mark as inactive
+        totalFightsInitiated += 1;
+        hasInitiatedFight[msg.sender] = true; // Mark that the player has initiated a fight this round
 
         // Emit the event for each fight
         emit FightResult(msg.sender, player.attack * randomMultiplier);
@@ -96,6 +101,12 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         require(totalFightsInitiated >= FIGHTS_PER_DAY, "Not enough fights initiated today.");
 
         activeRound += 1;
+
+        totalFightsInitiated = 0;
+        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+            address playerAddress = ownerOf(i);
+            hasInitiatedFight[playerAddress] = false;
+        }
 
         if (activeRound > TOTAL_ROUNDS) {
             distributePrizes();
