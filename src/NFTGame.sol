@@ -12,18 +12,25 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         uint256 health;
         uint256[3] items;
         bool isActive;
+        bool isWinner;
     }
 
     mapping(address => Player) public players;
+    mapping(uint256 => bool) public hasParticipatedInRound;
+
     uint256 public activeRound;
-    uint256 public totalFightsInitiated;
-    uint256 constant FIGHTS_PER_DAY = 2;
-    uint256 constant ROUND_DURATION = 1 days;
-    uint256 constant TOTAL_ROUNDS = 10;
+    uint256 public winnerLB;
+    uint256 public winnerUB;
+
+    uint256 constant ROUND_DURATION = 12 hours;
+    uint256 constant TOTAL_ROUNDS = 6;
     uint256 constant PLAYER_ATTACK = 100;
     uint256 constant PLAYER_HEALTH = 100;
 
     uint256 private _tokenIdCounter;
+
+    uint256 public round;
+    uint256 public lastRoundTime;
 
     // VRF Config (GOERLI)
     event RequestSent(uint256 requestId, uint32 numWords);
@@ -34,8 +41,6 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         bool exists; // whether a requestId exists
         uint256[] randomWords;
     }
-
-    mapping(address => bool) public hasInitiatedFight;
 
     mapping(uint256 => RequestStatus) public s_requests;
 
@@ -59,7 +64,7 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
     // Cannot exceed VRFCoordinatorV2.MAX_NUM_WORDS.
     uint32 numWords = 2;
 
-    event FightResult(address player, uint256 damage);
+    array = new uint256[](0);
 
     constructor(uint64 subscriptionId)
         VRFConsumerBaseV2(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D)
@@ -68,65 +73,45 @@ contract NFTGame is ERC721Enumerable, VRFConsumerBaseV2, Ownable {
         COORDINATOR = VRFCoordinatorV2Interface(0x2Ca8E0C643bDe4C2E08ab1fA0da3401AdAD7734D);
         s_subscriptionId = subscriptionId;
         activeRound = 1;
-    }
-
-    function initiateFight() public {
-        Player storage player = players[msg.sender];
-        require(player.health > 0, "Your player is eliminated.");
-        require(player.isActive == true, "Player not active for this round.");
-        require(hasInitiatedFight[msg.sender] == false, "Player has already initiated a fight this round.");
-
-        totalFightsInitiated += 1;
-
-        uint256 randomMultiplier = randomNum(361, lastRequestId) % 3 + 1; // get a random number between 1-3
-
-        uint256 enemyHealth = 100; // Assume enemy has 100 health
-
-        while (player.health > 0 && enemyHealth > 0) {
-            enemyHealth -= player.attack * randomMultiplier;
-            if (enemyHealth <= 0) break;
-            player.health -= 50 * randomMultiplier; // Assume enemy deals 50 damage per turn
-        }
-
-        if (player.health <= 0) player.isActive = false; // Player loses, mark as inactive
-        totalFightsInitiated += 1;
-        hasInitiatedFight[msg.sender] = true; // Mark that the player has initiated a fight this round
-
-        // Emit the event for each fight
-        emit FightResult(msg.sender, player.attack * randomMultiplier);
-    }
-
-    function endRound() public {
-        require(block.timestamp % ROUND_DURATION == 0, "Round not ended yet.");
-        require(totalFightsInitiated >= FIGHTS_PER_DAY, "Not enough fights initiated today.");
-
-        activeRound += 1;
-
-        totalFightsInitiated = 0;
-        for (uint256 i = 1; i <= _tokenIdCounter; i++) {
-            address playerAddress = ownerOf(i);
-            hasInitiatedFight[playerAddress] = false;
-        }
-
-        if (activeRound > TOTAL_ROUNDS) {
-            distributePrizes();
-            return;
-        }
-
-        // Reset totalFightsInitiated for the new round
-        totalFightsInitiated = 0;
-    }
-
-    function distributePrizes() private {
-        // Logic for distributing prizes to remaining players
+        winnerLB = 0;
+        winnerUB = totalSupply();
     }
 
     function mintPlayerNFT() public {
         _tokenIdCounter += 1;
         _mint(msg.sender, _tokenIdCounter);
+        players[msg.sender] = Player(PLAYER_ATTACK, PLAYER_HEALTH, , true, false);
+    }
 
-        // Initialize player stats
-        players[msg.sender] = Player(PLAYER_ATTACK, PLAYER_HEALTH, [0, 0, 0], true);
+    function startNextRound() public {
+        require(block.timestamp % ROUND_DURATION == 0, "Round not ended yet.");
+
+        activeRound += 1;
+        uint256 totalMinted = totalSupply();
+
+        if (activeRound > 1) {
+            uint256 randomNum = randomNum(totalMinted, lastRequestId);
+
+            if (randomNum % 2 == 0) {
+                winnerUB = winnerLB + ((winnerUB - winnerLB) / 2);
+            } else {
+                winnerLB = winnerLB + ((winnerUB - winnerLB) / 2);
+            }
+
+            for (uint256 i = 1; i <= _tokenIdCounter; i++) {
+                address playerAddress = ownerOf(i);
+                if (i >= winnerLB && i <= winnerUB) {
+                    players[playerAddress].isWinner = true;
+                } else {
+                    players[playerAddress].isWinner = false;
+                    players[playerAddress].isActive = false;
+                }
+            }
+        }
+    }
+
+    function isWinner(uint256 tokenId) public view returns (bool) {
+        return (tokenId >= winnerLB && tokenId <= winnerUB);
     }
 
     function requestRandomWords() external onlyOwner returns (uint256 requestId) {
