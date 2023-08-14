@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import "../src/NFTGame.sol";
+import "../src/IceCreamNFTV2.sol";
 
 contract deployNFTGame is Script {
     NFTGame game;
