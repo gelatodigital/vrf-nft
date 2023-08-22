@@ -36,7 +36,8 @@ contract RandomSVGColorNFT is ERC721Enumerable, GelatoVRFConsumer {
     }
 
     function mintSVG() public {
-        inbox.requestRandomness(this, "");
+        caller = msg.sender;
+        inbox.requestRandomness(this, abi.encode(caller));
     }
 
     function tokenURI(uint256 tokenId)
