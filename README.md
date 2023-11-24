@@ -41,5 +41,5 @@ forge verify-contract ${contractAddress} IceCreamNFT --chain-id ${chainid} --con
 e.g.
 
 ```console
-forge verify-contract 0xcD5Cc3a3cE0EdB77D51b6270908B1b2355B66797 IceCreamNFT --chain-id mumbai --constructor-args $(cast abi-encode "constructor(address)" "0xFD7089D182cB7b0005fF7dFdf8a86C828179a483")
+forge verify-contract 0xbde9e58E2D796e84502A68b8494faE1eb4c92CC2 IceCreamNFT --chain-id mumbai --constructor-args $(cast abi-encode "constructor(address)" "0xFD7089D182cB7b0005fF7dFdf8a86C828179a483")
 ```
