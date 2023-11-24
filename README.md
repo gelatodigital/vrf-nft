@@ -15,7 +15,7 @@ Run `forge test -vvv`
 ## Deploy
 
 ```console
-$ forge script ./script/DeployIceCreamNFT.s.sol --rpc-url ${rpcurl}
+forge script ./script/DeployIceCreamNFT.s.sol --rpc-url ${rpcurl}
 ```
 
 ## Verify contract
