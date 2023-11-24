@@ -3,44 +3,37 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./Consumer.sol";
-import "./Inbox.sol";
+import "./vendor/GelatoVRFConsumerBase.sol";
 import "./Base64.sol";
 
-contract RandomSVGColorNFT_1 is ERC721Enumerable, GelatoVRFConsumer {
+contract IceCreamNFT is ERC721Enumerable, GelatoVRFConsumerBase {
     using Strings for uint256;
 
-    GelatoVRFInbox public inbox;
-    address public dedicatedMsgSender;
+    address private immutable _operatorAddr;
     uint256 public _tokenIdCounter;
 
     // Mapping from token ID to SVG data
     mapping(uint256 => string) private _svgData;
 
-    // Mapping from token ID to rarity
-    mapping(uint256 => uint256) private _tokenRarities;
-
-    constructor(GelatoVRFInbox _inbox, address _dedicatedMsgSender) ERC721("RandomSVGColorNFT", "RSCNFT") {
-        inbox = _inbox;
-        dedicatedMsgSender = _dedicatedMsgSender;
+    function _operator() internal view override returns (address) {
+        return _operatorAddr;
     }
 
-    function fullfillRandomness(uint256 randomness, bytes calldata) external {
-        require(msg.sender == dedicatedMsgSender, "The sender is not the VRF");
+    constructor(address operator) ERC721("IceCreamNFT", "ICE") {
+        _operatorAddr = operator;
+    }
 
+    function _fulfillRandomness(uint256 randomness, uint256, bytes memory extraData) internal override {
         uint256 tokenId = _tokenIdCounter;
-        _mint(msg.sender, tokenId);
+        _mint(abi.decode(extraData, (address)), tokenId);
         _tokenIdCounter += 1;
 
         string memory svg = generateSVG(randomness);
         _svgData[tokenId] = svg;
-
-        // Calculate and set the rarity for the token
-        _tokenRarities[tokenId] = calculateRarityBasedOnColors(svg);
     }
 
     function mintSVG() public {
-        inbox.requestRandomness(this, "");
+        _requestRandomness(abi.encode(msg.sender));
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -58,60 +51,12 @@ contract RandomSVGColorNFT_1 is ERC721Enumerable, GelatoVRFConsumer {
                             tokenId.toString(),
                             '","description":"A randomized SVG color NFT","image":"',
                             imageURI,
-                            '","rarity":"',
-                            _tokenRarities[tokenId].toString(),
                             '"}'
                         )
                     )
                 )
             )
         );
-    }
-
-    function calculateRarityBasedOnColors(string memory svg) internal pure returns (uint256) {
-        uint256 maxRarity = 0;
-
-        string[10] memory colors = [
-            "red", // 0
-            "green", // 1
-            "blue", // 2
-            "yellow", // 3
-            "pink", // 4
-            "purple", // 5
-            "orange", // 6
-            "cyan", // 7
-            "magenta", // 8
-            "black" // 9
-        ];
-
-        for (uint256 i = 0; i < 10; i++) {
-            if (containsString(svg, colors[i])) {
-                if (i > maxRarity) {
-                    maxRarity = i;
-                }
-            }
-        }
-
-        return maxRarity;
-    }
-
-    function containsString(string memory _base, string memory _value) internal pure returns (bool) {
-        bytes memory _baseBytes = bytes(_base);
-        bytes memory _valueBytes = bytes(_value);
-
-        for (uint256 i = 0; i < _baseBytes.length - _valueBytes.length + 1; i++) {
-            bool found = true;
-            for (uint256 j = 0; j < _valueBytes.length; j++) {
-                if (_baseBytes[i + j] != _valueBytes[j]) {
-                    found = false;
-                    break;
-                }
-            }
-            if (found) {
-                return true;
-            }
-        }
-        return false;
     }
 
     function generateSVG(uint256 randomness) internal pure returns (string memory) {

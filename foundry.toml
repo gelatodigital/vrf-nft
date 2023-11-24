@@ -2,5 +2,9 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc = "0.8.19"
+via_ir=true
 
+[etherscan]
+mumbai = { key = "${ETHERSCAN_MUMBAI_API_KEY}" }
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
