@@ -3,32 +3,30 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./Consumer.sol";
-import "./Inbox.sol";
+import "./vendor/GelatoVRFConsumerBase.sol";
 import "./Base64.sol";
 
-contract RandomSVGColorNFT is ERC721Enumerable, GelatoVRFConsumer {
+contract IceCreamNFT is ERC721Enumerable, GelatoVRFConsumerBase {
     using Strings for uint256;
 
-    GelatoVRFInbox public inbox;
-    address public dedicatedMsgSender;
+    address private immutable _operatorAddr;
     uint256 public _tokenIdCounter;
 
     // Mapping from token ID to SVG data
     mapping(uint256 => string) private _svgData;
 
-    constructor(GelatoVRFInbox _inbox, address _dedicatedMsgSender)
-        ERC721("RandomSVGColorNFT", "RSCNFT")
+    function _operator() internal view override returns (address) {
+        return _operatorAddr;
+    }
+    constructor(address operator)
+        ERC721("IceCreamNFT", "ICE")
     {
-        inbox = _inbox;
-        dedicatedMsgSender = _dedicatedMsgSender;
+        _operatorAddr = operator;
     }
 
-    function fullfillRandomness(uint256 randomness, bytes calldata message) external {
-        require(msg.sender == dedicatedMsgSender, "The sender is not the VRF");
-
+    function _fulfillRandomness(uint256 randomness, uint256, bytes memory extraData) internal override {
         uint256 tokenId = _tokenIdCounter;
-        _mint(abi.decode(message, (address)), tokenId);
+        _mint(abi.decode(extraData, (address)), tokenId);
         _tokenIdCounter += 1;
 
         string memory svg = generateSVG(randomness);
@@ -36,7 +34,7 @@ contract RandomSVGColorNFT is ERC721Enumerable, GelatoVRFConsumer {
     }
 
     function mintSVG() public {
-        inbox.requestRandomness(this, abi.encode(msg.sender));
+        _requestRandomness(abi.encode(msg.sender));
     }
 
     function tokenURI(uint256 tokenId)
