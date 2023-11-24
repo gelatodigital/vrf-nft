@@ -9,6 +9,6 @@ Template project using Gelato VRF to generate randomized NFTs.
    
 ## Test
 
-Run `forge test -via-ir`
+Run `forge test -vvv --via-ir`
 
 ## Deploy
