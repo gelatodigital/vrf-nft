@@ -8,7 +8,7 @@ contract TestIceCreamNFT is Test {
     IceCreamNFT nft;
     address operator;
 
-    event RequestedRandomness(uint256 indexed round, bytes data);
+    event RequestedRandomness(uint256 round, bytes data);
 
     function setUp() public {
         operator = address(1);
