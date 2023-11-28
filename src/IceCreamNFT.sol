@@ -2,11 +2,12 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./vendor/GelatoVRFConsumerBase.sol";
 import "./Base64.sol";
 
-contract IceCreamNFT is ERC721Enumerable, GelatoVRFConsumerBase {
+contract IceCreamNFT is ERC721Enumerable, GelatoVRFConsumerBase, Ownable {
     using Strings for uint256;
 
     address private immutable _operatorAddr;
@@ -15,12 +16,28 @@ contract IceCreamNFT is ERC721Enumerable, GelatoVRFConsumerBase {
     // Mapping from token ID to SVG data
     mapping(uint256 => string) private _svgData;
 
+    mapping(address => uint256) public mintAllowance;
+
     function _operator() internal view override returns (address) {
         return _operatorAddr;
     }
 
     constructor(address operator) ERC721("IceCreamNFT", "ICE") {
         _operatorAddr = operator;
+    }
+
+    function allowMint(address receiver) public onlyOwner {
+        mintAllowance[receiver]++;
+    }
+
+    function allowMint(address receiver, uint256 amt) public onlyOwner {
+        mintAllowance[receiver] += amt;
+    }
+
+    function allowMint(address[] calldata receivers, uint256 amt) public onlyOwner {
+        for (uint256 i; i < receivers.length; i++) {
+            mintAllowance[receivers[i]] += amt;
+        }
     }
 
     function _fulfillRandomness(uint256 randomness, uint256, bytes memory extraData) internal override {
@@ -33,6 +50,8 @@ contract IceCreamNFT is ERC721Enumerable, GelatoVRFConsumerBase {
     }
 
     function mintSVG() public {
+        require(mintAllowance[msg.sender] > 0, "mint denied");
+        mintAllowance[msg.sender]--;
         _requestRandomness(abi.encode(msg.sender));
     }
 
