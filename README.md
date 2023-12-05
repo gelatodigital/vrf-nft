@@ -43,3 +43,36 @@ e.g.
 ```console
 forge verify-contract 0xbde9e58E2D796e84502A68b8494faE1eb4c92CC2 IceCreamNFT --chain-id mumbai --constructor-args $(cast abi-encode "constructor(address)" "0xFD7089D182cB7b0005fF7dFdf8a86C828179a483")
 ```
+
+## Create VRF Task
+
+Replace `consumerAddress` in `CreateTask.s.sol` with your consumer address.
+
+```ts
+    function run() public payable broadcast {
+        address consumerAddress = address(0); // Replace this
+        require(consumerAddress != address(0), "CreateTask.s.sol: Replace consumerAddress");
+    }
+```
+
+Make sure the constructor argument for `AutomateTaskCreator` is correct.
+You can find the correct Automate address in the [docs](https://docs.gelato.network/developer-services/web3-functions/contract-addresses)
+
+```ts
+    constructor() AutomateTaskCreator(address(0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0)) {}
+```
+
+Run this command to create a VRF task.
+
+```console
+forge script ./script/CreateTask.s.sol --rpc-url ${rpurl}
+```
+
+You can find the task id in the logs
+
+```ts
+== Logs ==
+  Broadcaster:  0x5ce6047a715B1919A58C549E6FBc1921B4d9287D
+  TaskId:
+  0x02a07660d4312b8a6f794592c25daf1c31ae03e71d60bbb8aaa06bb2fd26cb36
+```
