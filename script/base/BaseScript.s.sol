@@ -1,28 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Script} from "forge-std/Script.sol";
+import "forge-std/Script.sol";
 import "forge-std/console.sol";
-
-interface IOpsProxyFactory {
-    /**
-     * @return address Proxy address owned by account.
-     * @return bool Whether if proxy is deployed
-     */
-    function getProxyOf(address account) external view returns (address, bool);
-}
+import "../vendor/Types.sol";
 
 abstract contract BaseScript is Script {
     uint256 private privateKey;
     address internal broadcaster;
     address internal dedicatedMsgSender;
 
-    constructor() {
+    constructor(address _automate) {
         privateKey = vm.envUint("PRIVATE_KEY");
         broadcaster = vm.rememberKey(privateKey);
         console.log("Broadcaster: ", broadcaster);
 
-        _initDedicatedMsgSender();
+        _initDedicatedMsgSender(_automate);
     }
 
     modifier broadcast() {
@@ -31,12 +24,19 @@ abstract contract BaseScript is Script {
         vm.stopBroadcast();
     }
 
-    function _initDedicatedMsgSender() private {
-        address opsProxyFactoryAddress = block.chainid == 324
-            ? address(0xB675ce934431e42Fd3daE03e3a385b7e24ae7257)
-            : block.chainid == 43114
-                ? address(0x2807B4aE232b624023f87d0e237A3B1bf200Fd99)
-                : address(0x44bde1bccdD06119262f1fE441FBe7341EaaC185);
+    function _constructorArgumentCheck() internal view {
+        require(block.chainid == 0, "BaseScript.s.sol: Make sure the _automate address used is correct");
+        /**
+         * https://docs.gelato.network/developer-services/web3-functions/contract-addresses
+         * zksync era - 0xF27e0dfD58B423b1e1B90a554001d0561917602F
+         * all other networks - 0x2A6C106ae13B558BB9E2Ec64Bd2f1f7BEFF3A5E0
+         */
+    }
+
+    function _initDedicatedMsgSender(address _automate) private {
+        address proxyModuleAddress = IAutomate(_automate).taskModuleAddresses(Module.PROXY);
+
+        address opsProxyFactoryAddress = IProxyModule(proxyModuleAddress).opsProxyFactory();
 
         (dedicatedMsgSender,) = IOpsProxyFactory(opsProxyFactoryAddress).getProxyOf(broadcaster);
     }
